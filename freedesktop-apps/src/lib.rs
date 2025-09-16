@@ -15,6 +15,20 @@ pub enum ExecuteError {
     ValidationFailed(String),
 }
 
+impl std::fmt::Display for ExecuteError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExecuteError::NotExecutable(msg) => write!(f, "Application not executable: {}", msg),
+            ExecuteError::TerminalNotFound => write!(f, "No terminal emulator found"),
+            ExecuteError::InvalidCommand(msg) => write!(f, "Invalid command: {}", msg),
+            ExecuteError::IoError(msg) => write!(f, "I/O error: {}", msg),
+            ExecuteError::ValidationFailed(msg) => write!(f, "Validation failed: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ExecuteError {}
+
 pub fn application_entry_paths() -> Vec<PathBuf> {
     freedesktop_core::base_directories()
         .iter()
