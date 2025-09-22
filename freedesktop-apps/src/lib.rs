@@ -399,6 +399,44 @@ impl ApplicationEntry {
             inner: desktop_entry,
         })
     }
+
+    /// Find an ApplicationEntry by its desktop file ID
+    /// 
+    /// The desktop file ID follows the freedesktop specification format.
+    /// For example: "foo-bar.desktop" would look for files like:
+    /// - /usr/share/applications/foo/bar.desktop
+    /// - /usr/share/applications/foo-bar.desktop
+    pub fn from_id(id: &str) -> Option<Self> {
+        // Convert dashes back to path separators for subdirectories
+        let path_with_slashes = id.replace('-', "/");
+        
+        // Try both the converted path and the original ID as filename
+        let candidates = if path_with_slashes != id {
+            vec![path_with_slashes, id.to_string()]
+        } else {
+            vec![id.to_string()]
+        };
+        
+        for app_dir in application_entry_paths() {
+            for candidate in &candidates {
+                // Ensure .desktop extension
+                let desktop_file = if candidate.ends_with(".desktop") {
+                    candidate.clone()
+                } else {
+                    format!("{}.desktop", candidate)
+                };
+                
+                let full_path = app_dir.join(&desktop_file);
+                if full_path.exists() {
+                    if let Ok(entry) = Self::try_from_path(&full_path) {
+                        return Some(entry);
+                    }
+                }
+            }
+        }
+        
+        None
+    }
 }
 
 /// Spawn a process completely detached from the current process while preserving display environment
