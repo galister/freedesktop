@@ -1,14 +1,139 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+use ini::Ini;
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+};
+
+#[derive(Default)]
+pub struct IconTheme {
+    name: String,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+impl IconTheme {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    pub fn paths(&self) -> Vec<PathBuf> {
+        freedesktop_core::base_directories()
+            .iter()
+            .map(|path| path.join("icons").join(&self.name))
+            .filter(|path| path.exists())
+            .collect()
+    }
+
+    pub fn sizes(&self) -> HashSet<String> {
+        let mut sizes: HashSet<String> = HashSet::new();
+        for p in &self.paths() {
+            let Ok(size_dirs) = std::fs::read_dir(&p) else {
+                return sizes;
+            };
+
+            for s in size_dirs
+                .filter_map(|s| s.ok())
+                .filter(|s| s.path().is_dir())
+            {
+                sizes.insert(s.file_name().to_string_lossy().to_string());
+            }
+        }
+
+        sizes
+    }
+
+    fn config(&self) -> Ini {
+        let mut config_path: PathBuf = PathBuf::new();
+
+        for p in &self.paths() {
+            let theme_config_path = p.join("index.theme");
+            if theme_config_path.exists() {
+                config_path = theme_config_path;
+                break;
+            }
+        }
+
+        let Ok(config) = Ini::load_from_file(config_path) else {
+            return Ini::new();
+        };
+
+        config
+    }
+
+    pub fn config_value<S: Into<String>, A: AsRef<str>>(
+        &self,
+        section_name: S,
+        key: A,
+    ) -> Option<String> {
+        let cfg = &self.config();
+        let Some(section) = cfg.section(Some(section_name)) else {
+            return None;
+        };
+
+        let Some(value) = section.get(key) else {
+            return None;
+        };
+
+        Some(value.to_string())
+    }
+
+    pub fn inherits(&self) -> Vec<String> {
+        let Some(inherits) = &self.config_value("Icon Theme", "Inherits") else {
+            return Vec::new();
+        };
+
+        inherits.split(",").map(|s| String::from(s)).collect()
+    }
+
+    pub fn default_size(&self) -> Option<u32> {
+        let Some(size_str) = &self.config_value("Icon Theme", "DesktopDefault") else {
+            return None;
+        };
+
+        match size_str.parse::<u32>() {
+            Ok(n) => Some(n),
+            Err(_) => None,
+        }
+    }
+}
+
+impl IconTheme {
+    pub fn from_name<S: Into<String>>(name: S) -> IconTheme {
+        IconTheme { name: name.into() }
+    }
+
+    pub fn current() -> IconTheme {
+        let home = std::env::var("HOME").unwrap_or("/home".into());
+        let config_path = std::env::var("XDG_CONFIG_HOME").unwrap_or(home.clone());
+        let settings_paths = [
+            PathBuf::from(&config_path)
+                .join("gtk-4.0")
+                .join("settings.ini"),
+            PathBuf::from(&config_path)
+                .join("gtk-3.0")
+                .join("settings.ini"),
+            PathBuf::from(&home).join("gtk-4.0").join("settings.ini"),
+            PathBuf::from(&home).join("gtk-3.0").join("settings.ini"),
+        ];
+
+        for p in &settings_paths {
+            if !std::fs::exists(p).unwrap_or(false) {
+                continue;
+            }
+
+            let Ok(conf) = Ini::load_from_file(p) else {
+                continue;
+            };
+
+            if let Some(section) = conf.section(Some("Settings")) {
+                if let Some(theme) = section.get("gtk-icon-theme-name") {
+                    return IconTheme { name: theme.into() };
+                } else {
+                    continue;
+                }
+            }
+        }
+
+        IconTheme {
+            name: "hicolor".into(),
+        }
     }
 }

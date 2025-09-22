@@ -12,3 +12,5 @@ keywords.workspace = true
 categories.workspace = true
 
 [dependencies]
+freedesktop-core = { version = "0.0.2", path = "../freedesktop-core" }
+rust-ini = "0.21.3"

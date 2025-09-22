@@ -26,3 +26,12 @@ pub fn base_directories() -> Vec<PathBuf> {
 
     dirs
 }
+
+pub fn config_dir() -> PathBuf {
+    let Ok(dir) = std::env::var("XDG_CONFIG_HOME") else {
+        let home = std::env::var("HOME").expect("CRITICAL: $HOME variable not set or available");
+        return PathBuf::from(home).join(".config");
+    };
+
+    PathBuf::from(dir)
+}
