@@ -13,6 +13,18 @@ pub enum ParseError {
     MissingRequiredKey(String),
 }
 
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseError::IoError(msg) => write!(f, "IO error: {}", msg),
+            ParseError::InvalidFormat(msg) => write!(f, "Invalid format: {}", msg),
+            ParseError::MissingRequiredKey(msg) => write!(f, "Missing required key: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ParseError {}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ValueType {
     String(String),

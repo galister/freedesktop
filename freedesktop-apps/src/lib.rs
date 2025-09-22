@@ -6,6 +6,37 @@ use parser::{DesktopEntry, ValueType};
 // Re-export the ParseError from parser
 pub use parser::ParseError;
 
+#[derive(Debug)]
+pub enum FindError {
+    NotFound(String),        // Desktop entry ID not found
+    ParseError(ParseError),  // Failed to parse the desktop file
+    IoError(std::io::Error), // IO error during search
+}
+
+impl std::fmt::Display for FindError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FindError::NotFound(msg) => write!(f, "Desktop entry not found: {}", msg),
+            FindError::ParseError(err) => write!(f, "Parse error: {}", err),
+            FindError::IoError(err) => write!(f, "IO error: {}", err),
+        }
+    }
+}
+
+impl std::error::Error for FindError {}
+
+impl From<ParseError> for FindError {
+    fn from(err: ParseError) -> Self {
+        FindError::ParseError(err)
+    }
+}
+
+impl From<std::io::Error> for FindError {
+    fn from(err: std::io::Error) -> Self {
+        FindError::IoError(err)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum ExecuteError {
     NotExecutable(String),
@@ -374,7 +405,7 @@ impl ApplicationEntry {
             if let Ok(dir_entries) = std::fs::read_dir(p) {
                 for entry in dir_entries.filter_map(|e| e.ok()) {
                     if entry.path().extension().is_some_and(|ext| ext == "desktop") {
-                        if let Ok(app_entry) = ApplicationEntry::try_from_path(entry.path()) {
+                        if let Ok(app_entry) = ApplicationEntry::from_path(entry.path()) {
                             entries.push(app_entry);
                         }
                     }
@@ -384,12 +415,9 @@ impl ApplicationEntry {
         entries
     }
 
-    /// Create an ApplicationEntry from a path, panicking on error (for compatibility)
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Self {
-        Self::try_from_path(path).unwrap_or_else(|_| {
-            // Return empty entry if parsing fails to maintain compatibility
-            ApplicationEntry::default()
-        })
+    /// Create an ApplicationEntry from a path
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, ParseError> {
+        Self::try_from_path(path)
     }
 
     /// Try to create an ApplicationEntry from a path, returning Result
@@ -406,7 +434,7 @@ impl ApplicationEntry {
     /// For example: "foo-bar.desktop" would look for files like:
     /// - /usr/share/applications/foo/bar.desktop
     /// - /usr/share/applications/foo-bar.desktop
-    pub fn from_id(id: &str) -> Option<Self> {
+    pub fn from_id(id: &str) -> Result<Self, FindError> {
         // Convert dashes back to path separators for subdirectories
         let path_with_slashes = id.replace('-', "/");
         
@@ -428,14 +456,12 @@ impl ApplicationEntry {
                 
                 let full_path = app_dir.join(&desktop_file);
                 if full_path.exists() {
-                    if let Ok(entry) = Self::try_from_path(&full_path) {
-                        return Some(entry);
-                    }
+                    return Self::from_path(&full_path).map_err(FindError::from);
                 }
             }
         }
         
-        None
+        Err(FindError::NotFound(format!("No desktop entry found for ID: {}", id)))
     }
 }
 
