@@ -19,19 +19,13 @@ fn main() {
     // println!("Current icon theme: {}", theme);
 
     let theme = IconTheme::current();
-    let stack = theme.inheritance_stack();
-    for t in stack {
-        let it = IconTheme::from_name(t);
-        print_theme_info(it);
-    }
+    let icon = theme.get("directory");
+    println!("{}", icon.unwrap().display());
 }
 
 fn print_theme_info(theme: IconTheme) {
     println!("--- {} ---", theme.name());
     println!("Default size: {}", theme.default_size().unwrap_or(1));
-    for p in theme.paths() {
-        println!("{}", p.display());
-    }
     for i in theme.inherits() {
         println!("INHERIT: {}", i);
     }

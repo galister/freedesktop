@@ -27,11 +27,27 @@ pub fn base_directories() -> Vec<PathBuf> {
     dirs
 }
 
-pub fn config_dir() -> PathBuf {
+pub fn xdg_config_home() -> PathBuf {
     let Ok(dir) = std::env::var("XDG_CONFIG_HOME") else {
         let home = std::env::var("HOME").expect("CRITICAL: $HOME variable not set or available");
         return PathBuf::from(home).join(".config");
     };
 
     PathBuf::from(dir)
+}
+
+pub fn xdg_data_home() -> PathBuf {
+    std::env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            let home = std::env::var_os("HOME")
+                .expect("$HOME environment variable not set. This is a critical failure");
+            PathBuf::from(home).join(".local/share")
+        })
+}
+
+pub fn xdg_data_dirs() -> Vec<PathBuf> {
+    let raw = std::env::var("XDG_DATA_DIRS")
+        .unwrap_or_else(|_| "/usr/local/share:/usr/share".to_string());
+    raw.split(':').map(PathBuf::from).collect()
 }
