@@ -19,7 +19,7 @@ fn main() {
     // println!("Current icon theme: {}", theme);
 
     let theme = IconTheme::current();
-    let icon = theme.get("directory");
+    let icon = theme.get("com.discordapp.Discord");
     println!("{}", icon.unwrap().display());
 }
 

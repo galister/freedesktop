@@ -4,12 +4,14 @@ use std::{
     fmt::format,
     hash::Hash,
     path::{Path, PathBuf},
+    time::Instant,
 };
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct IconTheme {
     name: String,
     path: PathBuf,
+    config: Ini,
 }
 
 impl IconTheme {
@@ -17,13 +19,8 @@ impl IconTheme {
         &self.name
     }
 
-    fn config(&self) -> Ini {
-        let config_path = &self.path.join("index.theme");
-        let Ok(config) = Ini::load_from_file(config_path) else {
-            return Ini::new();
-        };
-
-        config
+    fn config(&self) -> &Ini {
+        &self.config
     }
 
     pub fn config_value<S: Into<String>, A: AsRef<str>>(
@@ -31,7 +28,7 @@ impl IconTheme {
         section_name: S,
         key: A,
     ) -> Option<String> {
-        let cfg = &self.config();
+        let cfg = self.config();
         let Some(section) = cfg.section(Some(section_name)) else {
             return None;
         };
@@ -131,26 +128,77 @@ impl IconTheme {
     /// Get an icon by name following the freedesktop icon theme specification
     /// Searches through the current theme and inherited themes for the icon
     pub fn get(&self, icon_name: &str) -> Option<PathBuf> {
+        let total_start = Instant::now();
+        
+        let size_start = Instant::now();
         let size = self.default_size().unwrap_or(48);
+        println!("  Getting default size took: {:?}", size_start.elapsed());
+        
+        let stack_start = Instant::now();
         let stack = self.inheritance_stack();
+        println!("  Building inheritance stack took: {:?}", stack_start.elapsed());
+        println!("  Stack has {} themes", stack.len());
+        
+        let filenames_start = Instant::now();
         let filenames = [
             format!("{}.{}", icon_name, "svg"),
             format!("{}.{}", icon_name, "png"),
             format!("{}.{}", icon_name, "xpm"),
         ];
+        println!("  Creating filenames took: {:?}", filenames_start.elapsed());
 
+        let search_start = Instant::now();
+        let mut themes_searched = 0;
+        let mut dirs_searched = 0;
+        let mut files_checked = 0;
+        
         for theme in stack {
-            for d in theme.icon_dirs(size, 1) {
+            themes_searched += 1;
+            let theme_start = Instant::now();
+            
+            let dirs_start = Instant::now();
+            let dirs = theme.icon_dirs(size, 1);
+            let dirs_count = dirs.len();
+            println!("    Theme '{}': Getting {} icon dirs took: {:?}", theme.name, dirs_count, dirs_start.elapsed());
+            
+            for d in dirs {
+                dirs_searched += 1;
+                let dir_start = Instant::now();
+                
                 for f in &filenames {
+                    files_checked += 1;
+                    let file_start = Instant::now();
                     let icon_path = d.join(f);
-
+                    let join_time = file_start.elapsed();
+                    
+                    let exists_start = Instant::now();
                     if icon_path.exists() {
+                        let exists_time = exists_start.elapsed();
+                        println!("      Found! Join took: {:?}, exists() took: {:?}", join_time, exists_time);
+                        println!("  Total search took: {:?}", search_start.elapsed());
+                        println!("  Stats: {} themes, {} dirs, {} files checked", themes_searched, dirs_searched, files_checked);
+                        println!("TOTAL get() took: {:?}", total_start.elapsed());
                         return Some(icon_path);
                     }
+                    let exists_time = exists_start.elapsed();
+                    if exists_time.as_micros() > 100 {
+                        println!("      Slow exists() check for {:?}: {:?}", icon_path.file_name().unwrap_or_default(), exists_time);
+                    }
                 }
+                
+                if dir_start.elapsed().as_millis() > 1 {
+                    println!("    Dir {:?} took: {:?}", d.file_name().unwrap_or_default(), dir_start.elapsed());
+                }
+            }
+            
+            if theme_start.elapsed().as_millis() > 5 {
+                println!("  Theme '{}' took: {:?}", theme.name, theme_start.elapsed());
             }
         }
 
+        println!("  Icon not found after searching: {:?}", search_start.elapsed());
+        println!("  Stats: {} themes, {} dirs, {} files checked", themes_searched, dirs_searched, files_checked);
+        println!("TOTAL get() took: {:?}", total_start.elapsed());
         None
     }
 }
@@ -168,21 +216,31 @@ impl IconTheme {
         let name: String = name.into();
         let xdg_home_path = freedesktop_core::xdg_data_home().join("icons").join(&name);
 
-        if xdg_home_path.exists() && xdg_home_path.join("index.theme").exists() {
-            return Some(IconTheme {
-                name: name.into(),
-                path: xdg_home_path,
-            });
+        if xdg_home_path.exists() {
+            let config_path = xdg_home_path.join("index.theme");
+            if config_path.exists() {
+                let config = Ini::load_from_file(&config_path).unwrap_or_else(|_| Ini::new());
+                return Some(IconTheme {
+                    name: name.into(),
+                    path: xdg_home_path,
+                    config,
+                });
+            }
         }
 
         for data_dir in freedesktop_core::xdg_data_dirs() {
             let theme_path = data_dir.join("icons").join(&name);
 
-            if theme_path.exists() && theme_path.join("index.theme").exists() {
-                return Some(IconTheme {
-                    name: name.into(),
-                    path: theme_path,
-                });
+            if theme_path.exists() {
+                let config_path = theme_path.join("index.theme");
+                if config_path.exists() {
+                    let config = Ini::load_from_file(&config_path).unwrap_or_else(|_| Ini::new());
+                    return Some(IconTheme {
+                        name: name.into(),
+                        path: theme_path,
+                        config,
+                    });
+                }
             }
         }
 
