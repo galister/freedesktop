@@ -3,7 +3,7 @@ members = [
     "freedesktop",
     "freedesktop-apps",
     "freedesktop-cli",
-    "freedesktop-core",
+    "freedesktop-core", "freedesktop-icon",
 ]
 resolver = "2"
 
