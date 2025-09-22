@@ -1,3 +1,5 @@
+use std::{collections::HashSet, rc::Rc};
+
 use freedesktop_apps::ApplicationEntry;
 use freedesktop_icon::IconTheme;
 
@@ -17,17 +19,20 @@ fn main() {
     // println!("Current icon theme: {}", theme);
 
     let theme = IconTheme::current();
-    for i in theme.inherits() {
-        println!("INHERIT: {}", i);
+    let stack = theme.inheritance_stack();
+    for t in stack {
+        let it = IconTheme::from_name(t);
+        print_theme_info(it);
     }
+}
 
+fn print_theme_info(theme: IconTheme) {
+    println!("--- {} ---", theme.name());
     println!("Default size: {}", theme.default_size().unwrap_or(1));
-
     for p in theme.paths() {
         println!("{}", p.display());
-        println!("Sizes:");
-        for s in theme.sizes() {
-            println!("- {}", s);
-        }
+    }
+    for i in theme.inherits() {
+        println!("INHERIT: {}", i);
     }
 }

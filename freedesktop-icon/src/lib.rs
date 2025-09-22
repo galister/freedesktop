@@ -93,6 +93,19 @@ impl IconTheme {
             Err(_) => None,
         }
     }
+
+    /// Get the full inheritance stack for a theme
+    /// by following its own Inherits= as well
+    /// as the Inherits of the themes it
+    /// inherits from.
+    /// INCLUSIVE: The stack will include the current
+    /// theme's name.
+    /// This function is mostly used internally,
+    /// but it is exposed in case you have a
+    /// special use case.
+    pub fn inheritance_stack(&self) -> HashSet<String> {
+        get_inheritance_stack(&self, HashSet::new())
+    }
 }
 
 impl IconTheme {
@@ -136,4 +149,15 @@ impl IconTheme {
             name: "hicolor".into(),
         }
     }
+}
+
+fn get_inheritance_stack(theme: &IconTheme, mut set: HashSet<String>) -> HashSet<String> {
+    set.insert(theme.name().into());
+
+    for t in theme.inherits() {
+        let it = IconTheme::from_name(t);
+        set.extend(get_inheritance_stack(&it, set.clone()));
+    }
+
+    set
 }
