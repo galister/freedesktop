@@ -1,11 +1,5 @@
 use ini::Ini;
-use std::{
-    collections::HashSet,
-    fmt::format,
-    hash::Hash,
-    path::{Path, PathBuf},
-    time::Instant,
-};
+use std::{collections::HashSet, path::PathBuf, time::Instant};
 
 #[derive(Debug, Clone)]
 pub struct IconTheme {
@@ -33,13 +27,8 @@ impl IconTheme {
         key: A,
     ) -> Option<String> {
         let cfg = self.config();
-        let Some(section) = cfg.section(Some(section_name)) else {
-            return None;
-        };
-
-        let Some(value) = section.get(key) else {
-            return None;
-        };
+        let section = cfg.section(Some(section_name))?;
+        let value = section.get(key)?;
 
         Some(value.to_string())
     }
@@ -49,7 +38,7 @@ impl IconTheme {
             return Vec::new();
         };
 
-        inherits.split(",").map(|s| String::from(s)).collect()
+        inherits.split(",").map(String::from).collect()
     }
 
     pub fn icon_dirs(&self, size: u32, scale: u8) -> Vec<PathBuf> {
@@ -57,16 +46,15 @@ impl IconTheme {
             return Vec::new();
         };
 
-        let dirs: Vec<String> = dir_str.split(",").map(|s| String::from(s)).collect();
+        let dirs: Vec<String> = dir_str.split(",").map(String::from).collect();
 
         let mut paths: Vec<PathBuf> = Vec::new();
 
         for d in &dirs {
             let dir_size = &self
                 .config_value(d, "Size")
-                .and_then(|s| Some(s.parse::<u32>().unwrap_or(0)))
-                .or_else(|| Some(0))
-                .unwrap();
+                .map(|s| s.parse::<u32>().unwrap_or(0))
+                .unwrap_or(0);
 
             let dir_scale = match &self.config_value(d, "Scale") {
                 Some(s) => s.parse::<u8>().unwrap_or(1),
@@ -86,10 +74,7 @@ impl IconTheme {
             return None;
         };
 
-        match size_str.parse::<u32>() {
-            Ok(n) => Some(n),
-            Err(_) => None,
-        }
+        size_str.parse::<u32>().ok()
     }
 
     /// Get the full inheritance stack for a theme
@@ -311,9 +296,13 @@ impl IconTheme {
             if config_path.exists() {
                 let parse_start = Instant::now();
                 let config = Ini::load_from_file(&config_path).unwrap_or_else(|_| Ini::new());
-                println!("        Parsing {} index.theme took: {:?}", name, parse_start.elapsed());
+                println!(
+                    "        Parsing {} index.theme took: {:?}",
+                    name,
+                    parse_start.elapsed()
+                );
                 return Some(IconTheme {
-                    name: name.into(),
+                    name,
                     path: xdg_home_path,
                     config,
                 });
@@ -328,9 +317,13 @@ impl IconTheme {
                 if config_path.exists() {
                     let parse_start = Instant::now();
                     let config = Ini::load_from_file(&config_path).unwrap_or_else(|_| Ini::new());
-                    println!("        Parsing {} index.theme took: {:?}", name, parse_start.elapsed());
+                    println!(
+                        "        Parsing {} index.theme took: {:?}",
+                        name,
+                        parse_start.elapsed()
+                    );
                     return Some(IconTheme {
-                        name: name.into(),
+                        name,
                         path: theme_path,
                         config,
                     });

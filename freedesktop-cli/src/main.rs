@@ -1,6 +1,4 @@
-use std::{collections::HashSet, rc::Rc};
 
-use freedesktop_apps::ApplicationEntry;
 use freedesktop_icon::IconTheme;
 
 fn main() {
