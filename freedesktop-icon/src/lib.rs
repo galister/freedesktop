@@ -1,7 +1,7 @@
 use ini::Ini;
 use std::{path::PathBuf, sync::LazyLock};
 
-static CURRENT_ICON_THEME: LazyLock<IconTheme> = LazyLock::new(|| IconTheme::current());
+static CURRENT_ICON_THEME: LazyLock<IconTheme> = LazyLock::new(IconTheme::current);
 
 #[derive(Debug, Clone)]
 pub struct IconTheme {
