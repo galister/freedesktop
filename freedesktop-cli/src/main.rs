@@ -1,4 +1,3 @@
-
 use freedesktop_icon::IconTheme;
 
 fn main() {
@@ -17,9 +16,8 @@ fn main() {
     // println!("Current icon theme: {}", theme);
 
     let theme = IconTheme::current();
-    let icon = theme.get("application-x-executable");
+    let icon = theme.get("vscode");
     println!("{}", icon.unwrap().display());
-    println!("{:#?}", IconTheme::from_name("hicolor").unwrap().path());
 }
 
 fn print_theme_info(theme: IconTheme) {

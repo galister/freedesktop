@@ -1,5 +1,5 @@
 use ini::Ini;
-use std::{collections::HashSet, path::PathBuf, time::Instant};
+use std::{collections::HashSet, io::BufRead, path::PathBuf, time::Instant};
 
 #[derive(Debug, Clone)]
 pub struct IconTheme {
@@ -86,194 +86,122 @@ impl IconTheme {
     /// This function is mostly used internally,
     /// but it is exposed in case you have a
     /// special use case.
-    pub fn inheritance_stack(&self) -> Vec<IconTheme> {
-        let total_start = Instant::now();
-        println!("    Building inheritance stack for theme '{}'", self.name);
+    // pub fn inheritance_stack(&self) -> Vec<String> {
+    //     // We will do a depth first search over
+    //     // the inheritance chain
+    //     let mut seen: HashSet<String> = HashSet::new();
+    //     let mut search_stack: Vec<String> = Vec::new();
+    //     let mut stack: Vec<String> = Vec::new();
 
-        // We will do a depth first search over
-        // the inheritance chain
-        let mut seen: HashSet<String> = HashSet::new();
-        let mut search_stack: Vec<String> = Vec::new();
-        let mut stack: Vec<IconTheme> = Vec::new();
+    //     seen.insert(self.name.clone());
 
-        let init_start = Instant::now();
-        seen.insert(self.name.clone());
+    //     search_stack.extend(self.inherits().into_iter().rev().collect::<Vec<String>>());
 
-        let inherits_start = Instant::now();
-        let initial_inherits = self.inherits();
-        println!(
-            "      Getting initial inherits took: {:?} - found {} themes",
-            inherits_start.elapsed(),
-            initial_inherits.len()
-        );
+    //     while let Some(next) = search_stack.pop() {
+    //         if seen.contains(&next) {
+    //             println!("      Skipping already seen theme: {}", next);
+    //             continue;
+    //         }
 
-        let extend_start = Instant::now();
-        search_stack.extend(initial_inherits.into_iter().rev().collect::<Vec<String>>());
-        println!(
-            "      Extending search stack took: {:?}",
-            extend_start.elapsed()
-        );
+    //         seen.insert(next.clone());
 
-        stack.push(self.clone());
-        println!("      Initial setup took: {:?}", init_start.elapsed());
+    //         let from_name_start = Instant::now();
+    //         let Some(theme) = IconTheme::from_name(next.clone()) else {
+    //             let from_name_time = from_name_start.elapsed();
+    //             println!(
+    //                 "      Failed to load theme '{}' in {:?}",
+    //                 next, from_name_time
+    //             );
+    //             continue;
+    //         };
+    //         let from_name_time = from_name_start.elapsed();
+    //         from_name_total += from_name_time;
+    //         themes_loaded += 1;
+    //         println!("      Loaded theme '{}' in {:?}", next, from_name_time);
 
-        let mut themes_loaded = 0;
-        let mut from_name_total = std::time::Duration::ZERO;
-        let mut inherits_total = std::time::Duration::ZERO;
+    //         let inherits_start = Instant::now();
+    //         let theme_inherits = theme.inherits();
+    //         let inherits_time = inherits_start.elapsed();
+    //         inherits_total += inherits_time;
+    //         println!(
+    //             "        Theme '{}' inherits {} themes, took {:?}",
+    //             next,
+    //             theme_inherits.len(),
+    //             inherits_time
+    //         );
 
-        let loop_start = Instant::now();
-        while let Some(next) = search_stack.pop() {
-            if seen.contains(&next) {
-                println!("      Skipping already seen theme: {}", next);
-                continue;
-            }
+    //         search_stack.extend(theme_inherits.into_iter().rev().collect::<Vec<String>>());
+    //         stack.push(theme);
+    //     }
 
-            seen.insert(next.clone());
+    //     println!("      Loop processing took: {:?}", loop_start.elapsed());
+    //     println!("      Stats: {} themes loaded", themes_loaded);
+    //     println!("        Total from_name() time: {:?}", from_name_total);
+    //     println!("        Total inherits() time: {:?}", inherits_total);
+    //     println!(
+    //         "    Total inheritance_stack took: {:?}, returning {} themes",
+    //         total_start.elapsed(),
+    //         stack.len()
+    //     );
 
-            let from_name_start = Instant::now();
-            let Some(theme) = IconTheme::from_name(next.clone()) else {
-                let from_name_time = from_name_start.elapsed();
-                println!(
-                    "      Failed to load theme '{}' in {:?}",
-                    next, from_name_time
-                );
-                continue;
-            };
-            let from_name_time = from_name_start.elapsed();
-            from_name_total += from_name_time;
-            themes_loaded += 1;
-            println!("      Loaded theme '{}' in {:?}", next, from_name_time);
+    //     stack
+    // }
 
-            let inherits_start = Instant::now();
-            let theme_inherits = theme.inherits();
-            let inherits_time = inherits_start.elapsed();
-            inherits_total += inherits_time;
-            println!(
-                "        Theme '{}' inherits {} themes, took {:?}",
-                next,
-                theme_inherits.len(),
-                inherits_time
-            );
-
-            search_stack.extend(theme_inherits.into_iter().rev().collect::<Vec<String>>());
-            stack.push(theme);
-        }
-
-        println!("      Loop processing took: {:?}", loop_start.elapsed());
-        println!("      Stats: {} themes loaded", themes_loaded);
-        println!("        Total from_name() time: {:?}", from_name_total);
-        println!("        Total inherits() time: {:?}", inherits_total);
-        println!(
-            "    Total inheritance_stack took: {:?}, returning {} themes",
-            total_start.elapsed(),
-            stack.len()
-        );
-
-        stack
-    }
-
-    /// Get an icon by name following the freedesktop icon theme specification
-    /// Searches through the current theme and inherited themes for the icon
-    pub fn get(&self, icon_name: &str) -> Option<PathBuf> {
-        let total_start = Instant::now();
-
-        let size_start = Instant::now();
-        let size = self.default_size().unwrap_or(48);
-        println!("  Getting default size took: {:?}", size_start.elapsed());
-
-        let stack_start = Instant::now();
-        let stack = self.inheritance_stack();
-        println!(
-            "  Building inheritance stack took: {:?}",
-            stack_start.elapsed()
-        );
-        println!("  Stack has {} themes", stack.len());
-
-        let filenames_start = Instant::now();
+    // Internal function for getting an icon from the
+    // theme. The public get() function actually
+    // traverses the inheritance chain.
+    fn get_icon(&self, icon_name: &str, size: u32, scale: u8) -> Option<PathBuf> {
         let filenames = [
             format!("{}.{}", icon_name, "svg"),
             format!("{}.{}", icon_name, "png"),
             format!("{}.{}", icon_name, "xpm"),
         ];
-        println!("  Creating filenames took: {:?}", filenames_start.elapsed());
 
-        let search_start = Instant::now();
-        let mut themes_searched = 0;
-        let mut dirs_searched = 0;
-        let mut files_checked = 0;
-
-        for theme in stack {
-            themes_searched += 1;
-            let theme_start = Instant::now();
-
-            let dirs_start = Instant::now();
-            let dirs = theme.icon_dirs(size, 1);
-            let dirs_count = dirs.len();
-            println!(
-                "    Theme '{}': Getting {} icon dirs took: {:?}",
-                theme.name,
-                dirs_count,
-                dirs_start.elapsed()
-            );
-
-            for d in dirs {
-                dirs_searched += 1;
-                let dir_start = Instant::now();
-
-                for f in &filenames {
-                    files_checked += 1;
-                    let file_start = Instant::now();
-                    let icon_path = d.join(f);
-                    let join_time = file_start.elapsed();
-
-                    let exists_start = Instant::now();
-                    if icon_path.exists() {
-                        let exists_time = exists_start.elapsed();
-                        println!(
-                            "      Found! Join took: {:?}, exists() took: {:?}",
-                            join_time, exists_time
-                        );
-                        println!("  Total search took: {:?}", search_start.elapsed());
-                        println!(
-                            "  Stats: {} themes, {} dirs, {} files checked",
-                            themes_searched, dirs_searched, files_checked
-                        );
-                        println!("TOTAL get() took: {:?}", total_start.elapsed());
-                        return Some(icon_path);
-                    }
-                    let exists_time = exists_start.elapsed();
-                    if exists_time.as_micros() > 100 {
-                        println!(
-                            "      Slow exists() check for {:?}: {:?}",
-                            icon_path.file_name().unwrap_or_default(),
-                            exists_time
-                        );
-                    }
+        for d in &self.icon_dirs(size, scale) {
+            for f in &filenames {
+                let icon_path = d.join(f);
+                if icon_path.exists() {
+                    return Some(icon_path);
                 }
-
-                if dir_start.elapsed().as_millis() > 1 {
-                    println!(
-                        "    Dir {:?} took: {:?}",
-                        d.file_name().unwrap_or_default(),
-                        dir_start.elapsed()
-                    );
-                }
-            }
-
-            if theme_start.elapsed().as_millis() > 5 {
-                println!("  Theme '{}' took: {:?}", theme.name, theme_start.elapsed());
             }
         }
 
-        println!(
-            "  Icon not found after searching: {:?}",
-            search_start.elapsed()
-        );
-        println!(
-            "  Stats: {} themes, {} dirs, {} files checked",
-            themes_searched, dirs_searched, files_checked
-        );
-        println!("TOTAL get() took: {:?}", total_start.elapsed());
+        None
+    }
+
+    /// Get an icon by name following the freedesktop icon theme specification
+    /// Searches through the current theme and inherited themes for the icon
+    pub fn get(&self, icon_name: &str) -> Option<PathBuf> {
+        let size_start = Instant::now();
+        let size = self.default_size().unwrap_or(48);
+        println!("  Getting default size took: {:?}", size_start.elapsed());
+        let scale: u8 = 1;
+
+        // let stack_start = Instant::now();
+        // let stack = self.inheritance_stack();
+        // println!(
+        //     "  Building inheritance stack took: {:?}",
+        //     stack_start.elapsed()
+        // );
+        // println!("  Stack has {} themes", stack.len());
+
+        if let Some(icon_path) = &self.get_icon(icon_name, size, scale) {
+            return Some(icon_path.to_owned());
+        }
+
+        // If we don't find it in the current theme, start recursing
+        // into the inheritance chain loading the themes lazily
+        for theme_name in &self.inherits() {
+            let Some(theme) = IconTheme::from_name(theme_name) else {
+                continue;
+            };
+
+            match theme.get_icon(icon_name, size, scale) {
+                Some(icon_path) => return Some(icon_path),
+                None => continue,
+            }
+        }
+
         None
     }
 }
@@ -347,26 +275,48 @@ impl IconTheme {
             PathBuf::from(&home).join("gtk-4.0").join("settings.ini"),
             PathBuf::from(&home).join("gtk-3.0").join("settings.ini"),
         ];
-        let fallback_theme = IconTheme::from_name("hicolor").expect("The hicolor theme is not present. This is a required fallback theme and must be installed");
+        let fallback_theme = || {
+            println!("Ran this bitch");
+            IconTheme::from_name("hicolor").expect("The hicolor theme is not present. This is a required fallback theme and must be installed")
+        };
 
         for p in &settings_paths {
+            println!("path: {}", p.display());
             if !p.exists() {
+                println!("No exists");
                 continue;
             }
 
             let Ok(conf) = Ini::load_from_file(p) else {
+                println!("Could not load ini");
                 continue;
             };
 
             if let Some(section) = conf.section(Some("Settings")) {
                 if let Some(theme) = section.get("gtk-icon-theme-name") {
-                    return IconTheme::from_name(theme).unwrap_or(fallback_theme);
+                    return IconTheme::from_name(theme).unwrap_or_else(fallback_theme);
                 } else {
+                    println!("No section");
                     continue;
                 }
             }
         }
 
-        fallback_theme
+        fallback_theme()
     }
+}
+
+// We'll use this function when we just need a line from
+// an index.theme without having to parse the whole file
+fn find_line(path: &str, prefix: &str) -> Option<String> {
+    let file = std::fs::File::open(path).ok()?;
+    let reader = std::io::BufReader::new(file);
+
+    for line in reader.lines().filter_map(|l| l.ok()) {
+        if line.starts_with(prefix) {
+            return Some(line);
+        }
+    }
+
+    None
 }
