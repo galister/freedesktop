@@ -201,9 +201,8 @@ fn test_from_path_fallback() {
     let path = fixture_path("malformed_missing_required.desktop");
     let entry = ApplicationEntry::from_path(&path);
     
-    // Should get a default entry
-    assert_eq!(entry.name(), None);
-    assert_eq!(entry.entry_type(), None);
+    // Should get a parse error for malformed file
+    assert!(entry.is_err());
 }
 
 #[test]
