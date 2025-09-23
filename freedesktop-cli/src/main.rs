@@ -1,22 +1,32 @@
+use freedesktop_apps::ApplicationEntry;
 use freedesktop_icon::IconTheme;
 
 fn main() {
+    // Icons not found (but should be I think)
+    // - yazi
+    // - Mattermost
+    let theme = IconTheme::current();
+    println!("Current icon theme: {}", theme.name());
     // for app in ApplicationEntry::all() {
     //     if app.should_show() {
-    //         println!("{}", app.path().display());
+    //         println!("{}", app.name().unwrap());
+    //         if let Some(app_icon) = app.icon() {
+    //             println!("-- ICON --");
+    //             println!("{}", app_icon);
+    //             let icon = theme.get(&app_icon);
+    //             println!(
+    //                 "{}",
+    //                 icon.map_or_else(
+    //                     || "Not found".to_string(),
+    //                     |p| p.to_string_lossy().into_owned()
+    //                 )
+    //             );
+    //         }
+    //         println!();
     //     }
     // }
-    // let app = ApplicationEntry::from_id("steam").expect("Could not find app");
-    // app.execute();
-    // let app =
-    //     ApplicationEntry::from_path("/home/javi/.nix-profile/share/applications/obsidian.desktop");
-    // app.execute();
-    // let theme = IconTheme::current();
 
-    // println!("Current icon theme: {}", theme);
-
-    let theme = IconTheme::current();
-    let icon = theme.get("vscode");
+    let icon = theme.get("yazi");
     println!("{}", icon.unwrap().display());
 }
 

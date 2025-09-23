@@ -1,5 +1,5 @@
 use ini::Ini;
-use std::{collections::HashSet, io::BufRead, path::PathBuf, time::Instant};
+use std::{collections::HashSet, io::BufRead, path::PathBuf};
 
 #[derive(Debug, Clone)]
 pub struct IconTheme {
@@ -151,99 +151,47 @@ impl IconTheme {
     // theme. The public get() function actually
     // traverses the inheritance chain.
     fn get_icon(&self, icon_name: &str, size: u32, scale: u8) -> Option<PathBuf> {
-        let filenames_start = Instant::now();
         let filenames = [
             format!("{}.{}", icon_name, "svg"),
             format!("{}.{}", icon_name, "png"),
             format!("{}.{}", icon_name, "xpm"),
         ];
-        println!("    Creating filenames took: {:?}", filenames_start.elapsed());
 
-        let dirs_start = Instant::now();
-        let dirs = self.icon_dirs(size, scale);
-        let dirs_count = dirs.len();
-        println!("    Theme '{}': Getting {} icon dirs took: {:?}", self.name, dirs_count, dirs_start.elapsed());
-
-        let search_start = Instant::now();
-        let mut dirs_searched = 0;
-        let mut files_checked = 0;
-        
-        for d in &dirs {
-            dirs_searched += 1;
+        for d in &self.icon_dirs(size, scale) {
             for f in &filenames {
-                files_checked += 1;
                 let icon_path = d.join(f);
                 if icon_path.exists() {
-                    println!("    Found icon after checking {} dirs and {} files in {:?}", dirs_searched, files_checked, search_start.elapsed());
                     return Some(icon_path);
                 }
             }
         }
-        
-        println!("    Icon not found in theme '{}' after checking {} dirs and {} files in {:?}", self.name, dirs_searched, files_checked, search_start.elapsed());
+
         None
     }
 
     /// Get an icon by name following the freedesktop icon theme specification
     /// Searches through the current theme and inherited themes for the icon
     pub fn get(&self, icon_name: &str) -> Option<PathBuf> {
-        let total_start = Instant::now();
-        
-        let size_start = Instant::now();
         let size = self.default_size().unwrap_or(48);
-        println!("  Getting default size took: {:?}", size_start.elapsed());
         let scale: u8 = 1;
 
-        println!("  Searching current theme '{}'...", self.name);
-        let current_theme_start = Instant::now();
         if let Some(icon_path) = &self.get_icon(icon_name, size, scale) {
-            println!("  Found in current theme in {:?}", current_theme_start.elapsed());
-            println!("TOTAL get() took: {:?}", total_start.elapsed());
             return Some(icon_path.to_owned());
         }
-        println!("  Current theme search took: {:?}", current_theme_start.elapsed());
 
         // If we don't find it in the current theme, start recursing
         // into the inheritance chain loading the themes lazily
-        let inheritance_start = Instant::now();
-        let inherits = self.inherits();
-        println!("  Current theme inherits {} themes: {:?}", inherits.len(), inherits);
-        
-        let mut themes_loaded = 0;
-        let mut from_name_total = std::time::Duration::ZERO;
-        
-        for theme_name in &inherits {
-            let from_name_start = Instant::now();
+        for theme_name in &self.inherits() {
             let Some(theme) = IconTheme::from_name(theme_name) else {
-                let from_name_time = from_name_start.elapsed();
-                println!("    Failed to load inherited theme '{}' in {:?}", theme_name, from_name_time);
                 continue;
             };
-            let from_name_time = from_name_start.elapsed();
-            from_name_total += from_name_time;
-            themes_loaded += 1;
-            println!("    Loaded inherited theme '{}' in {:?}", theme_name, from_name_time);
 
-            let theme_search_start = Instant::now();
             match theme.get_icon(icon_name, size, scale) {
-                Some(icon_path) => {
-                    println!("    Found in inherited theme '{}' after {:?}", theme_name, theme_search_start.elapsed());
-                    println!("  Total inheritance search took: {:?}", inheritance_start.elapsed());
-                    println!("    Stats: {} themes loaded, total from_name() time: {:?}", themes_loaded, from_name_total);
-                    println!("TOTAL get() took: {:?}", total_start.elapsed());
-                    return Some(icon_path);
-                },
-                None => {
-                    println!("    Not found in inherited theme '{}' (took {:?})", theme_name, theme_search_start.elapsed());
-                    continue;
-                }
+                Some(icon_path) => return Some(icon_path),
+                None => continue,
             }
         }
 
-        println!("  Icon '{}' not found in any theme", icon_name);
-        println!("  Total inheritance search took: {:?}", inheritance_start.elapsed());
-        println!("    Stats: {} themes loaded, total from_name() time: {:?}", themes_loaded, from_name_total);
-        println!("TOTAL get() took: {:?}", total_start.elapsed());
         None
     }
 }
@@ -264,13 +212,7 @@ impl IconTheme {
         if xdg_home_path.exists() {
             let config_path = xdg_home_path.join("index.theme");
             if config_path.exists() {
-                let parse_start = Instant::now();
                 let config = Ini::load_from_file(&config_path).unwrap_or_else(|_| Ini::new());
-                println!(
-                    "        Parsing {} index.theme took: {:?}",
-                    name,
-                    parse_start.elapsed()
-                );
                 return Some(IconTheme {
                     name,
                     path: xdg_home_path,
@@ -285,13 +227,7 @@ impl IconTheme {
             if theme_path.exists() {
                 let config_path = theme_path.join("index.theme");
                 if config_path.exists() {
-                    let parse_start = Instant::now();
                     let config = Ini::load_from_file(&config_path).unwrap_or_else(|_| Ini::new());
-                    println!(
-                        "        Parsing {} index.theme took: {:?}",
-                        name,
-                        parse_start.elapsed()
-                    );
                     return Some(IconTheme {
                         name,
                         path: theme_path,
@@ -318,19 +254,15 @@ impl IconTheme {
             PathBuf::from(&home).join("gtk-3.0").join("settings.ini"),
         ];
         let fallback_theme = || {
-            println!("Ran this bitch");
             IconTheme::from_name("hicolor").expect("The hicolor theme is not present. This is a required fallback theme and must be installed")
         };
 
         for p in &settings_paths {
-            println!("path: {}", p.display());
             if !p.exists() {
-                println!("No exists");
                 continue;
             }
 
             let Ok(conf) = Ini::load_from_file(p) else {
-                println!("Could not load ini");
                 continue;
             };
 
@@ -338,7 +270,6 @@ impl IconTheme {
                 if let Some(theme) = section.get("gtk-icon-theme-name") {
                     return IconTheme::from_name(theme).unwrap_or_else(fallback_theme);
                 } else {
-                    println!("No section");
                     continue;
                 }
             }
