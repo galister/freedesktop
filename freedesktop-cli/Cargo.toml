@@ -9,5 +9,5 @@ description.workspace = true
 
 [dependencies]
 freedesktop-apps = { path = "../freedesktop-apps" }
-freedesktop-core = { version = "0.0.2", path = "../freedesktop-core" }
+freedesktop-core = { version = "0.0.3", path = "../freedesktop-core" }
 freedesktop-icon = { path = "../freedesktop-icon" }

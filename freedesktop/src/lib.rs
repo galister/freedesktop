@@ -8,6 +8,7 @@
 //!
 //! - **`core`** (default) - XDG base directories and desktop environment detection
 //! - **`apps`** (default) - Desktop Entry parsing and application execution  
+//! - **`icon`** (default) - Icon theme support and icon lookup
 //! - **`cli`** - Command-line utilities (enables `apps`)
 //!
 //! ## Quick Start
@@ -48,10 +49,28 @@
 //! # }
 //! ```
 //!
+//! ### Icon Themes
+//!
+//! ```rust
+//! # #[cfg(feature = "icon")]
+//! # {
+//! use freedesktop::{IconTheme, get_icon};
+//!
+//! // Get the current icon theme
+//! let theme = IconTheme::current();
+//! println!("Current theme: {}", theme.name());
+//!
+//! // Find an icon
+//! if let Some(icon_path) = get_icon("firefox") {
+//!     println!("Firefox icon: {}", icon_path.display());
+//! }
+//! # }
+//! ```
+//!
 //! ## Feature Usage
 //!
 //! ```toml
-//! # Default - includes core and apps
+//! # Default - includes core, apps, and icon
 //! freedesktop = "0.1.0"
 //!
 //! # Only XDG base directories
@@ -59,6 +78,9 @@
 //!
 //! # Only desktop applications (automatically includes core)
 //! freedesktop = { version = "0.1.0", default-features = false, features = ["apps"] }
+//!
+//! # Icon theme support (automatically includes core)
+//! freedesktop = { version = "0.1.0", default-features = false, features = ["icon"] }
 //! ```
 
 #![cfg_attr(docsrs, feature(doc_cfg))]

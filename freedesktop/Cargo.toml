@@ -12,16 +12,17 @@ keywords.workspace = true
 categories.workspace = true
 
 [features]
-default = ["core", "apps"]
+default = ["core", "apps", "icon"]
 core = ["dep:freedesktop-core"]
 apps = ["core", "dep:freedesktop-apps"]
+icon = ["core", "dep:freedesktop-icon"]
 cli = ["apps"]                          # For potential future CLI utilities
 
 [dependencies]
 # Optional dependencies enabled by features
-freedesktop-core = { path = "../freedesktop-core", version = "0.0.2", optional = true }
-freedesktop-apps = { path = "../freedesktop-apps", version = "0.0.2", optional = true }
-freedesktop-icon = { path = "../freedesktop-icon", version = "0.0.2", optional = true }
+freedesktop-core = { path = "../freedesktop-core", version = "0.0.3", optional = true }
+freedesktop-apps = { path = "../freedesktop-apps", version = "0.0.3", optional = true }
+freedesktop-icon = { path = "../freedesktop-icon", version = "0.0.3", optional = true }
 
 [dev-dependencies]
 # For testing different feature combinations

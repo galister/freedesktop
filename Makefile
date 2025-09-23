@@ -18,9 +18,6 @@ lint:
 lint-fix:
 	cargo clippy --fix
 
-test:
-	cargo test
-
 # Development targets
 check:
 	@echo "🔍 Checking all crates..."
@@ -41,35 +38,40 @@ publish-dry-run:
 	cargo publish --dry-run -p freedesktop-core
 	@echo ""
 	@echo "⚠️  Note: Cannot dry-run dependent crates until dependencies are published"
-	@echo "   freedesktop-apps and freedesktop will fail until freedesktop-core is published"
+	@echo "   Other crates will fail until their dependencies are published"
 	@echo ""
 	@echo "✅ freedesktop-core dry run completed!"
 	@echo "📋 Ready to publish! Run 'make publish' when ready."
+
+# Define publish order (dependency order matters)
+PUBLISH_ORDER := freedesktop-core freedesktop-apps freedesktop-icon freedesktop
 
 # Publish all crates in correct dependency order
 publish: check test
 	@echo "🚀 Publishing all crates in dependency order..."
 	@echo ""
 	@echo "This will publish to crates.io:"
-	@echo "  1. freedesktop-core"
-	@echo "  2. freedesktop-apps (depends on core)"
-	@echo "  3. freedesktop (umbrella, depends on both)"
+	@i=1; for crate in $(PUBLISH_ORDER); do \
+		echo "  $$i. $$crate"; \
+		i=$$((i+1)); \
+	done
 	@echo ""
 	@read -p "Continue? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
 	@echo ""
-	@echo "📦 1/3 Publishing freedesktop-core..."
-	cargo publish -p freedesktop-core
-	@echo "⏳ Waiting 60 seconds for crates.io to index freedesktop-core..."
-	sleep 60
-	@echo "📦 2/3 Publishing freedesktop-apps..."
-	cargo publish -p freedesktop-apps
-	@echo "⏳ Waiting 60 seconds for crates.io to index freedesktop-apps..."
-	sleep 60
-	@echo "📦 3/3 Publishing freedesktop (umbrella)..."
-	cargo publish -p freedesktop
+	@total=$$(echo $(PUBLISH_ORDER) | wc -w); \
+	i=1; \
+	for crate in $(PUBLISH_ORDER); do \
+		echo "📦 $$i/$$total Publishing $$crate..."; \
+		cargo publish -p $$crate; \
+		if [ $$i -lt $$total ]; then \
+			echo "⏳ Waiting 60 seconds for crates.io to index $$crate..."; \
+			sleep 60; \
+		fi; \
+		i=$$((i+1)); \
+	done
 	@echo ""
 	@echo "🎉 All crates published successfully!"
 	@echo "📋 Next steps:"
-	@echo "  • Check https://crates.io/crates/freedesktop"
-	@echo "  • Check https://crates.io/crates/freedesktop-core"
-	@echo "  • Check https://crates.io/crates/freedesktop-apps"
+	@for crate in $(PUBLISH_ORDER); do \
+		echo "  • Check https://crates.io/crates/$$crate"; \
+	done

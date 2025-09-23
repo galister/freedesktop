@@ -3,12 +3,13 @@ members = [
     "freedesktop",
     "freedesktop-apps",
     "freedesktop-cli",
-    "freedesktop-core", "freedesktop-icon",
+    "freedesktop-core",
+    "freedesktop-icon",
 ]
 resolver = "2"
 
 [workspace.package]
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Javier Feliz <me@javierfeliz.com>"]
 edition = "2021"
 rust-version = "1.89"

@@ -11,7 +11,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-freedesktop = "0.0.1"
+freedesktop = "0.0.3"
 ```
 
 ### XDG Base Directories
@@ -44,25 +44,51 @@ let app = ApplicationEntry::try_from_path("/usr/share/applications/firefox.deskt
 app.execute()?;
 ```
 
+### Icon Themes
+
+```rust
+use freedesktop::{IconTheme, get_icon};
+
+// Get the current system icon theme
+let theme = IconTheme::current();
+println!("Current theme: {}", theme.name());
+
+// Find an icon using the convenience function
+if let Some(path) = get_icon("firefox") {
+    println!("Firefox icon: {}", path.display());
+}
+
+// Search within a specific theme
+if let Some(theme) = IconTheme::from_name("Adwaita") {
+    if let Some(path) = theme.get("folder") {
+        println!("Folder icon: {}", path.display());
+    }
+}
+```
+
 ## Features
 
 This crate provides optional features for different functionality:
 
 - **`core`** (default) - XDG base directories and desktop environment detection
 - **`apps`** (default) - Desktop Entry parsing and application execution  
+- **`icon`** (default) - Icon theme support and icon lookup
 - **`cli`** - Command-line utilities (enables `apps`)
 
 ### Feature Usage
 
 ```toml
-# Default features (core + apps)
-freedesktop = "0.0.1"
+# Default features (core + apps + icon)
+freedesktop = "0.0.3"
 
 # Only XDG base directories
-freedesktop = { version = "0.1.0", default-features = false, features = ["core"] }
+freedesktop = { version = "0.0.3", default-features = false, features = ["core"] }
 
 # Only desktop applications
-freedesktop = { version = "0.1.0", default-features = false, features = ["apps"] }
+freedesktop = { version = "0.0.3", default-features = false, features = ["apps"] }
+
+# Icon theme support
+freedesktop = { version = "0.0.3", default-features = false, features = ["icon"] }
 ```
 
 ## Standards Compliance
@@ -84,6 +110,7 @@ This library is built as a workspace with the following crates:
 
 - **[freedesktop-core](./freedesktop-core)** - XDG base directories and desktop environment detection
 - **[freedesktop-apps](./freedesktop-apps)** - Desktop Entry parsing and application execution
+- **[freedesktop-icon](./freedesktop-icon)** - Icon theme support and icon lookup
 
 ## License
 

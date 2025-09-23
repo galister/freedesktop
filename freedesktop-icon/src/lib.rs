@@ -1,5 +1,5 @@
 use ini::Ini;
-use std::{collections::HashSet, io::BufRead, path::PathBuf, sync::LazyLock};
+use std::{path::PathBuf, sync::LazyLock};
 
 static CURRENT_ICON_THEME: LazyLock<IconTheme> = LazyLock::new(|| IconTheme::current());
 

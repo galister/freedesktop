@@ -8,9 +8,7 @@ license.workspace = true
 description.workspace = true
 repository.workspace = true
 homepage.workspace = true
-keywords.workspace = true
-categories.workspace = true
 
 [dependencies]
-freedesktop-core = { version = "0.0.2", path = "../freedesktop-core" }
+freedesktop-core = { path = "../freedesktop-core", version = "0.0.3" }
 rust-ini = "0.21.3"
