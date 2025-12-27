@@ -61,11 +61,17 @@ impl std::fmt::Display for ExecuteError {
 impl std::error::Error for ExecuteError {}
 
 pub fn application_entry_paths() -> Vec<PathBuf> {
-    freedesktop_core::base_directories()
+    let mut paths: Vec<PathBuf> = freedesktop_core::base_directories()
         .iter()
         .map(|path| path.join("applications"))
-        .filter(|path| path.exists())
-        .collect()
+        .collect();
+
+    // system flatpak
+    paths.push(PathBuf::from("/var/lib/flatpak/exports/share/applications"));
+    // user flatpak
+    paths.push(freedesktop_core::xdg_data_home().join("flatpak/exports/share/applications"));
+
+    paths.into_iter().filter(|path| path.exists()).collect()
 }
 
 #[derive(Debug)]
